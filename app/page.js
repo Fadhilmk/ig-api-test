@@ -127,7 +127,7 @@ export default function InstagramProfile() {
       <p>Media Count: {profile.media_count}</p>
       <img src={profile.profile_picture_url} alt="Profile Picture" />
 
-      <h2>Instagram Media</h2>
+      <h2>Instagram Medias</h2>
       <ul>
         {media.map((mediaItem) => (
           <li key={mediaItem.id}>Media ID: {mediaItem.id}</li>
