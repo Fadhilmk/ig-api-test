@@ -49,14 +49,15 @@
 //   }
 // }
 
+import { NextResponse } from 'next/server'; // Import NextResponse for response handling in app directory
 import axios from 'axios';
 
-export async function GET(req, res) {
+export async function GET() {
   const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
 
   if (!accessToken) {
     console.error('Missing Instagram access token');
-    return res.status(500).json({ error: 'Missing Instagram access token' });
+    return NextResponse.json({ error: 'Missing Instagram access token' }, { status: 500 });  // Using NextResponse
   }
 
   try {
@@ -67,9 +68,9 @@ export async function GET(req, res) {
       },
     });
 
-    return res.status(200).json(response.data);
+    return NextResponse.json(response.data, { status: 200 });  // Returning a successful response with NextResponse
   } catch (error) {
     console.error('Error fetching data from Instagram API:', error.response ? error.response.data : error.message);
-    return res.status(500).json({ error: 'Failed to fetch data from Instagram API' });
+    return NextResponse.json({ error: 'Failed to fetch data from Instagram API' }, { status: 500 });  // Handle errors
   }
 }
