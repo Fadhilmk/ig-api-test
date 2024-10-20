@@ -207,6 +207,8 @@ async function handleMessage(message, userId, notificationsCollection, sender, r
     replyTo: message.reply_to || null,
   };
 
+  console.log('Message Data:', messageData); // Log the payload before writing
+
   // Save to Firebase under the "messages" document
   await addDoc(notificationsCollection, {
     type: 'message',
@@ -214,6 +216,7 @@ async function handleMessage(message, userId, notificationsCollection, sender, r
     timestamp: new Date(timestamp)
   });
 }
+
 
 // Handle incoming reaction event
 async function handleReaction(reaction, userId, notificationsCollection, sender, recipient, timestamp) {
