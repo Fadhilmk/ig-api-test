@@ -58,30 +58,67 @@
 //   processEventNotifications(req, res);  // Process the event notification
 // }
 
-export async function GET(req, res) {
-  const { query } = req;  // Properly access the query parameters
+// export async function GET(req, res) {
+//   const { query } = req;  // Properly access the query parameters
 
-  // Destructure the query parameters safely
-  const mode = query['hub.mode'];
-  const challenge = query['hub.challenge'];
-  const verifyToken = query['hub.verify_token'];
+//   // Destructure the query parameters safely
+//   const mode = query['hub.mode'];
+//   const challenge = query['hub.challenge'];
+//   const verifyToken = query['hub.verify_token'];
 
+//   const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
+
+//   // Validate the verify_token
+//   if (mode === 'subscribe' && verifyToken === VERIFY_TOKEN) {
+//     // Respond with the challenge
+//     res.status(200).send(challenge);
+//   } else {
+//     // Respond with 403 Forbidden if the verify_token is incorrect
+//     res.status(403).send('Forbidden');
+//   }
+// }
+
+// export async function POST(req, res) {
+//   // Handle the event notifications coming from Instagram
+//   console.log('Webhook event received:', req.body);
+
+//   // Always respond with 200 OK to acknowledge the event
+//   res.status(200).send('EVENT_RECEIVED');
+// }
+
+
+import { NextResponse } from 'next/server';
+
+// Handle GET request for webhook verification
+export async function GET(req) {
+  // Extract query parameters from the URL
+  const { searchParams } = new URL(req.url);
+  const mode = searchParams.get('hub.mode');
+  const token = searchParams.get('hub.verify_token');
+  const challenge = searchParams.get('hub.challenge');
+
+  // Get the VERIFY_TOKEN from environment variables
   const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
 
-  // Validate the verify_token
-  if (mode === 'subscribe' && verifyToken === VERIFY_TOKEN) {
-    // Respond with the challenge
-    res.status(200).send(challenge);
+  // Check if the request is a subscription request
+  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+    console.log('Webhook verification successful.');
+    
+    // Respond with the challenge token from the request
+    return new NextResponse(challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } });
   } else {
-    // Respond with 403 Forbidden if the verify_token is incorrect
-    res.status(403).send('Forbidden');
+    // Log the failure and respond with a 403 Forbidden status
+    console.error('Webhook verification failed: Invalid verify token or mode.');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 }
 
-export async function POST(req, res) {
-  // Handle the event notifications coming from Instagram
-  console.log('Webhook event received:', req.body);
+// Handle POST request for event notifications
+export async function POST(req) {
+  const body = await req.json();  // Parse the JSON body of the request
 
-  // Always respond with 200 OK to acknowledge the event
-  res.status(200).send('EVENT_RECEIVED');
+  console.log('Webhook event received:', body);  // Log the received event
+
+  // Respond with 200 OK to acknowledge receipt of the event
+  return NextResponse.json({ message: 'EVENT_RECEIVED' }, { status: 200 });
 }
