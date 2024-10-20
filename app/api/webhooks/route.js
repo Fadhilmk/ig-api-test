@@ -107,7 +107,7 @@
 
 
 import { NextResponse } from 'next/server';
-import { db } from '../../../../firebaseConfig'; // Firebase configuration
+import { db } from '../../../firebaseConfig'; // Firebase configuration
 import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
 import crypto from 'crypto';
 
