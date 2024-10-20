@@ -1,113 +1,55 @@
-// import crypto from 'crypto';
+// import { NextResponse } from 'next/server';
 
-// // VERIFY TOKEN: Set this to match what you set in the App Dashboard for the webhook
-// const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
-// const APP_SECRET = process.env.INSTAGRAM_APP_SECRET;  // App Secret from the Instagram Developer Dashboard
+// // Handle GET request for webhook verification
+// export async function GET(req) {
+//   // Extract query parameters from the URL
+//   const { searchParams } = new URL(req.url);
+//   const mode = searchParams.get('hub.mode');
+//   const token = searchParams.get('hub.verify_token');
+//   const challenge = searchParams.get('hub.challenge');
 
-// // Verify the incoming webhook requests
-// const verifyRequest = (req, res) => {
-//   const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
-
-//   // Verification request
-//   if (mode && token === VERIFY_TOKEN) {
-//     console.log('Verification successful');
-//     res.status(200).send(challenge);  // Respond with the hub.challenge
-//   } else {
-//     res.status(403).send('Forbidden');
-//   }
-// };
-
-// // Validate the payload's integrity using X-Hub-Signature-256
-// const validateSignature = (req) => {
-//   const signature = req.headers['x-hub-signature-256'] || '';
-//   const payload = JSON.stringify(req.body);
-
-//   const expectedSignature = `sha256=${crypto
-//     .createHmac('sha256', APP_SECRET)
-//     .update(payload)
-//     .digest('hex')}`;
-
-//   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
-// };
-
-// // Process incoming event notifications
-// const processEventNotifications = (req, res) => {
-//   const { entry, object } = req.body;
-
-//   // Loop through each entry and process the event
-//   entry.forEach((entryItem) => {
-//     const { changes, id, uid, time } = entryItem;
-//     console.log('Received event:', changes, id, time);
-
-//     // You can log or store data in Firebase here, if needed
-//   });
-
-//   res.status(200).send('EVENT_RECEIVED');  // Always respond with 200 OK
-// };
-
-// export async function GET(req, res) {
-//   verifyRequest(req, res);  // For the initial verification
-// }
-
-// export async function POST(req, res) {
-//   if (!validateSignature(req)) {
-//     res.status(403).send('Forbidden: Invalid Signature');
-//     return;
-//   }
-
-//   processEventNotifications(req, res);  // Process the event notification
-// }
-
-// export async function GET(req, res) {
-//   const { query } = req;  // Properly access the query parameters
-
-//   // Destructure the query parameters safely
-//   const mode = query['hub.mode'];
-//   const challenge = query['hub.challenge'];
-//   const verifyToken = query['hub.verify_token'];
-
+//   // Get the VERIFY_TOKEN from environment variables
 //   const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
 
-//   // Validate the verify_token
-//   if (mode === 'subscribe' && verifyToken === VERIFY_TOKEN) {
-//     // Respond with the challenge
-//     res.status(200).send(challenge);
+//   // Check if the request is a subscription request
+//   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+//     console.log('Webhook verification successful.');
+    
+//     // Respond with the challenge token from the request
+//     return new NextResponse(challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } });
 //   } else {
-//     // Respond with 403 Forbidden if the verify_token is incorrect
-//     res.status(403).send('Forbidden');
+//     // Log the failure and respond with a 403 Forbidden status
+//     console.error('Webhook verification failed: Invalid verify token or mode.');
+//     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 //   }
 // }
 
-// export async function POST(req, res) {
-//   // Handle the event notifications coming from Instagram
-//   console.log('Webhook event received:', req.body);
+// // Handle POST request for event notifications
+// export async function POST(req) {
+//   const body = await req.json();  // Parse the JSON body of the request
 
-//   // Always respond with 200 OK to acknowledge the event
-//   res.status(200).send('EVENT_RECEIVED');
+//   console.log('Webhook event received:', body);  // Log the received event
+
+//   // Respond with 200 OK to acknowledge receipt of the event
+//   return NextResponse.json({ message: 'EVENT_RECEIVED' }, { status: 200 });
 // }
 
-
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 
 // Handle GET request for webhook verification
 export async function GET(req) {
-  // Extract query parameters from the URL
   const { searchParams } = new URL(req.url);
   const mode = searchParams.get('hub.mode');
   const token = searchParams.get('hub.verify_token');
   const challenge = searchParams.get('hub.challenge');
 
-  // Get the VERIFY_TOKEN from environment variables
   const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
 
-  // Check if the request is a subscription request
   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
     console.log('Webhook verification successful.');
-    
-    // Respond with the challenge token from the request
     return new NextResponse(challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } });
   } else {
-    // Log the failure and respond with a 403 Forbidden status
     console.error('Webhook verification failed: Invalid verify token or mode.');
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -115,10 +57,50 @@ export async function GET(req) {
 
 // Handle POST request for event notifications
 export async function POST(req) {
-  const body = await req.json();  // Parse the JSON body of the request
+  const APP_SECRET = process.env.INSTAGRAM_APP_SECRET;
+  const X_HUB_SIGNATURE = req.headers.get('x-hub-signature-256');
 
-  console.log('Webhook event received:', body);  // Log the received event
+  const body = await req.text(); // Get raw body as a string for signature verification
+
+  // Verify that the request payload is genuine by comparing the SHA256 signature
+  const isValid = verifySignature(body, X_HUB_SIGNATURE, APP_SECRET);
+
+  if (!isValid) {
+    console.error('Invalid signature. Webhook payload not genuine.');
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
+  }
+
+  // Parse the JSON body of the request (now that it's verified)
+  const jsonBody = JSON.parse(body);
+  console.log('Webhook event received:', jsonBody);
+
+  // Handle event data (example: user posted a photo)
+  jsonBody.entry.forEach((entry) => {
+    const { id, changes, time } = entry;
+    changes.forEach((change) => {
+      console.log(`Change detected: ${change.field} at ${new Date(time * 1000).toLocaleString()}`);
+      console.log(`Change details:`, change.value);
+    });
+  });
 
   // Respond with 200 OK to acknowledge receipt of the event
   return NextResponse.json({ message: 'EVENT_RECEIVED' }, { status: 200 });
+}
+
+// Function to verify the payload signature using SHA256 and the app secret
+function verifySignature(payload, hubSignature, appSecret) {
+  if (!hubSignature || !hubSignature.startsWith('sha256=')) {
+    return false;
+  }
+
+  const signatureHash = hubSignature.split('sha256=')[1];
+
+  // Create a hash using the app secret and the payload
+  const expectedHash = crypto
+    .createHmac('sha256', appSecret)
+    .update(payload)
+    .digest('hex');
+
+  // Compare the hashes to ensure the payload is genuine
+  return crypto.timingSafeEqual(Buffer.from(signatureHash), Buffer.from(expectedHash));
 }

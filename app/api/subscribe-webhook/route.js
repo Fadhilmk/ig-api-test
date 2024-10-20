@@ -49,7 +49,7 @@ export async function POST(req) {
   try {
     const response = await axios.post(subscribeUrl, null, {
       params: {
-        subscribed_fields: 'comments,messages', // Fields to subscribe to
+        subscribed_fields: 'comments,messages,messaging_optins,messaging_postbacks,messaging_referral,messaging_seen,message_reactions', // Fields to subscribe to
         access_token: accessToken,
       },
     });
