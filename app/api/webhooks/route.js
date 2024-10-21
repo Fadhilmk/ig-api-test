@@ -632,7 +632,7 @@
 
 
 import { NextResponse } from 'next/server';
-import { db } from '../../../firebaseConfig'; // Firebase configuration
+import { db } from '../../../firebaseConfig';
 import { doc, collection, addDoc } from 'firebase/firestore';
 import crypto from 'crypto';
 
@@ -671,15 +671,15 @@ export async function POST(req) {
   const jsonBody = JSON.parse(body);
   console.log('Webhook event received:', jsonBody);
 
-  try {
-    // Clean the data before saving to Firestore
-    const cleanedData = cleanData(jsonBody);
+  // Sanitize and validate the data before storing
+  const sanitizedData = sanitizeData(jsonBody);
 
-    // Store the entire cleaned webhook object in Firestore under the 'webhooks' collection
+  try {
+    // Store the sanitized webhook object in Firestore under the 'webhooks' collection
     const webhooksCollection = collection(db, 'webhooks'); // Define the 'webhooks' collection
     await addDoc(webhooksCollection, {
       receivedAt: new Date().toISOString(), // Timestamp of when the event was received
-      data: cleanedData, // Store the full cleaned event data
+      data: sanitizedData, // Store the sanitized event data
     });
 
     console.log('Webhook event stored successfully.');
@@ -699,25 +699,9 @@ function verifySignature(payload, hubSignature, appSecret) {
   return crypto.timingSafeEqual(Buffer.from(signatureHash), Buffer.from(expectedHash));
 }
 
-// Function to clean the data before storing it in Firestore
-function cleanData(data) {
-  // Remove undefined, null, and invalid Firestore data types
-  if (data === undefined || data === null) {
-    return null; // Handle null or undefined as null
-  }
-
-  if (Array.isArray(data)) {
-    return data.map(item => cleanData(item)); // Recursively clean arrays
-  }
-
-  if (typeof data === 'object') {
-    const cleanedObject = {};
-    for (const [key, value] of Object.entries(data)) {
-      cleanedObject[key] = cleanData(value); // Recursively clean objects
-    }
-    return cleanedObject;
-  }
-
-  // Return primitive values (numbers, strings, etc.) as-is
+// Sanitize and validate the data
+function sanitizeData(data) {
+  // Implement your sanitization and validation logic here
+  // For example, you can remove sensitive information, validate data types, etc.
   return data;
 }
