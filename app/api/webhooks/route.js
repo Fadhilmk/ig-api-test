@@ -633,7 +633,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '../../../firebaseConfig';
-import { doc, collection, addDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import crypto from 'crypto';
 
 // Handle GET request for webhook verification
@@ -671,18 +671,15 @@ export async function POST(req) {
   const jsonBody = JSON.parse(body);
   console.log('Webhook event received:', jsonBody);
 
-  // Sanitize and validate the data before storing
-  const sanitizedData = sanitizeData(jsonBody);
-
   try {
-    // Store the sanitized webhook object in Firestore under the 'webhooks' collection
-    const webhooksCollection = collection(db, 'webhooks'); // Define the 'webhooks' collection
-    await addDoc(webhooksCollection, {
+    // Store a simple value in Firestore under the 'webhooks' collection
+    const docRef = doc(db, 'webhooks', 'test-entry'); // Define the 'webhooks' collection and use a fixed document ID
+    await setDoc(docRef, {
       receivedAt: new Date().toISOString(), // Timestamp of when the event was received
-      data: sanitizedData, // Store the sanitized event data
+      value: 1, // Store a simple value to test
     });
 
-    console.log('Webhook event stored successfully.');
+    console.log('Webhook event stored successfully with value 1.');
   } catch (error) {
     console.error('Error saving webhook event to Firestore:', error);
   }
@@ -697,11 +694,4 @@ function verifySignature(payload, hubSignature, appSecret) {
   const signatureHash = hubSignature.split('sha256=')[1];
   const expectedHash = crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
   return crypto.timingSafeEqual(Buffer.from(signatureHash), Buffer.from(expectedHash));
-}
-
-// Sanitize and validate the data
-function sanitizeData(data) {
-  // Implement your sanitization and validation logic here
-  // For example, you can remove sensitive information, validate data types, etc.
-  return data;
 }
