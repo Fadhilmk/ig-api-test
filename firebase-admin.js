@@ -11,14 +11,15 @@
 
 import admin from 'firebase-admin';
 
+// Parse the Firebase service account key from environment variables
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
 
-// Initialize Firebase Admin SDK only if it's not already initialized
-
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: process.env.FIREBASE_DATABASE_URL,
-});
-
+// Check if Firebase Admin is already initialized
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: process.env.FIREBASE_DATABASE_URL,
+    });
+}
 
 export { admin };
