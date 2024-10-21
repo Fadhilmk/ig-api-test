@@ -669,7 +669,7 @@ export async function POST(req) {
 
   // Parse the JSON body of the request
   const jsonBody = JSON.parse(body);
-  console.log('Webhook event received:', jsonBody);
+  console.log('Webhook event receiveds:', jsonBody);
 
   try {
     // Store the webhook data in Firestore using Firebase Admin
