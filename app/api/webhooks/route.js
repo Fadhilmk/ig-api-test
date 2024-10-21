@@ -632,10 +632,10 @@
 
 
 import { NextResponse } from 'next/server';
-import { db } from '../../../firebaseConfig';
-import { doc, setDoc } from 'firebase/firestore';
+import  admin from 'firebase-admin';
 import crypto from 'crypto';
 
+const db = admin.firestore();
 // Handle GET request for webhook verification
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
@@ -672,14 +672,13 @@ export async function POST(req) {
   console.log('Webhook event received:', jsonBody);
 
   try {
-    // Store a simple value in Firestore under the 'webhooks' collection
-    const docRef = doc(db, 'webhooks', 'test-entry'); // Define the 'webhooks' collection and use a fixed document ID
-    await setDoc(docRef, {
-      receivedAt: new Date().toISOString(), // Timestamp of when the event was received
-      value: 1, // Store a simple value to test
+    // Store the webhook data in Firestore using Firebase Admin
+    const docRef = db.collection('webhooks').doc(); // Generate a unique document ID
+    await docRef.set({
+      receivedAt: new Date().toISOString() // Timestamp of when the event was received
     });
 
-    console.log('Webhook event stored successfully with value 1.');
+    console.log('Webhook event stored successfully.');
   } catch (error) {
     console.error('Error saving webhook event to Firestore:', error);
   }
