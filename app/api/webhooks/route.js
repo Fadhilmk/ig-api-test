@@ -565,6 +565,72 @@
 //   });
 // }
 
+// import { NextResponse } from 'next/server';
+// import { db } from '../../../firebaseConfig'; // Firebase configuration
+// import { doc, collection, addDoc } from 'firebase/firestore';
+// import crypto from 'crypto';
+
+// // Handle GET request for webhook verification
+// export async function GET(req) {
+//   const { searchParams } = new URL(req.url);
+//   const mode = searchParams.get('hub.mode');
+//   const token = searchParams.get('hub.verify_token');
+//   const challenge = searchParams.get('hub.challenge');
+
+//   const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
+
+//   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+//     console.log('Webhook verification successful.');
+//     return new NextResponse(challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } });
+//   } else {
+//     console.error('Webhook verification failed: Invalid verify token or mode.');
+//     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+//   }
+// }
+
+// // Handle POST request for event notifications
+// export async function POST(req) {
+//   const APP_SECRET = process.env.INSTAGRAM_APP_SECRET;
+//   const X_HUB_SIGNATURE = req.headers.get('x-hub-signature-256');
+
+//   const body = await req.text(); // Get raw body for signature verification
+//   const isValid = verifySignature(body, X_HUB_SIGNATURE, APP_SECRET);
+
+//   if (!isValid) {
+//     console.error('Invalid signature. Webhook payload not genuine.');
+//     return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
+//   }
+
+//   // Parse the JSON body of the request
+//   const jsonBody = JSON.parse(body);
+//   console.log('Webhook event received:', jsonBody);
+
+//   try {
+//     // Store the entire webhook object in Firestore under the 'webhooks' collection
+//     const webhooksCollection = collection(db, 'webhooks'); // Define the 'webhooks' collection
+//     await addDoc(webhooksCollection, {
+//       receivedAt: new Date().toISOString(), // Timestamp of when the event was received
+//       data: jsonBody, // Store the full event data as received
+//     });
+
+//     console.log('Webhook event stored successfully.');
+//   } catch (error) {
+//     console.error('Error saving webhook event to Firestore:', error);
+//   }
+
+//   return NextResponse.json({ message: 'EVENT_RECEIVED' }, { status: 200 });
+// }
+
+// // Verify the signature for security
+// function verifySignature(payload, hubSignature, appSecret) {
+//   if (!hubSignature || !hubSignature.startsWith('sha256=')) return false;
+
+//   const signatureHash = hubSignature.split('sha256=')[1];
+//   const expectedHash = crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
+//   return crypto.timingSafeEqual(Buffer.from(signatureHash), Buffer.from(expectedHash));
+// }
+
+
 import { NextResponse } from 'next/server';
 import { db } from '../../../firebaseConfig'; // Firebase configuration
 import { doc, collection, addDoc } from 'firebase/firestore';
@@ -606,11 +672,14 @@ export async function POST(req) {
   console.log('Webhook event received:', jsonBody);
 
   try {
-    // Store the entire webhook object in Firestore under the 'webhooks' collection
+    // Clean the data before saving to Firestore
+    const cleanedData = cleanData(jsonBody);
+
+    // Store the entire cleaned webhook object in Firestore under the 'webhooks' collection
     const webhooksCollection = collection(db, 'webhooks'); // Define the 'webhooks' collection
     await addDoc(webhooksCollection, {
       receivedAt: new Date().toISOString(), // Timestamp of when the event was received
-      data: jsonBody, // Store the full event data as received
+      data: cleanedData, // Store the full cleaned event data
     });
 
     console.log('Webhook event stored successfully.');
@@ -628,4 +697,27 @@ function verifySignature(payload, hubSignature, appSecret) {
   const signatureHash = hubSignature.split('sha256=')[1];
   const expectedHash = crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
   return crypto.timingSafeEqual(Buffer.from(signatureHash), Buffer.from(expectedHash));
+}
+
+// Function to clean the data before storing it in Firestore
+function cleanData(data) {
+  // Remove undefined, null, and invalid Firestore data types
+  if (data === undefined || data === null) {
+    return null; // Handle null or undefined as null
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => cleanData(item)); // Recursively clean arrays
+  }
+
+  if (typeof data === 'object') {
+    const cleanedObject = {};
+    for (const [key, value] of Object.entries(data)) {
+      cleanedObject[key] = cleanData(value); // Recursively clean objects
+    }
+    return cleanedObject;
+  }
+
+  // Return primitive values (numbers, strings, etc.) as-is
+  return data;
 }
