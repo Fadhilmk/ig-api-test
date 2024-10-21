@@ -567,7 +567,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '../../../firebaseConfig'; // Firebase configuration
-import { doc, collection, writeBatch } from 'firebase/firestore';
+import { doc, collection, addDoc } from 'firebase/firestore';
 import crypto from 'crypto';
 
 // Handle GET request for webhook verification
@@ -605,60 +605,17 @@ export async function POST(req) {
   const jsonBody = JSON.parse(body);
   console.log('Webhook event received:', jsonBody);
 
-  // Handle the event notification and categorize it
-  for (const entry of jsonBody.entry) {
-    const userId = entry.id;  // Instagram User ID
-    const changes = entry.messaging || entry.changes;
+  try {
+    // Store the entire webhook object in Firestore under the 'webhooks' collection
+    const webhooksCollection = collection(db, 'webhooks'); // Define the 'webhooks' collection
+    await addDoc(webhooksCollection, {
+      receivedAt: new Date().toISOString(), // Timestamp of when the event was received
+      data: jsonBody, // Store the full event data as received
+    });
 
-    // Check for valid changes
-    if (!changes || changes.length === 0) {
-      console.warn('No changes or messaging events found.');
-      continue;
-    }
-
-    const userDocRef = doc(db, 'users', userId);
-    const notificationsCollection = collection(userDocRef, 'notifications');
-
-    // Use batch to handle multiple changes in one transaction
-    const batch = writeBatch(db);
-
-    for (const change of changes) {
-      const { sender = {}, recipient = {}, timestamp = Date.now() } = change;
-
-      // Process the notification based on its type
-      if (change.message) {
-        await handleMessage(change.message, batch, notificationsCollection, sender, recipient, timestamp);
-      } else if (change.reaction) {
-        await handleReaction(change.reaction, batch, notificationsCollection, sender, recipient, timestamp);
-      } else if (change.postback) {
-        await handlePostback(change.postback, batch, notificationsCollection, sender, recipient, timestamp);
-      } else if (change.referral) {
-        await handleReferral(change.referral, batch, notificationsCollection, sender, recipient, timestamp);
-      } else if (change.read) {
-        await handleSeen(change.read, batch, notificationsCollection, sender, recipient, timestamp);
-      } else if (change.comment) {
-        await handleCommentUpdate(change.comment, batch, notificationsCollection, sender, recipient, timestamp);
-      } else if (change.media) {
-        await handleMediaUpdate(change.media, batch, notificationsCollection, sender, recipient, timestamp);
-      } else {
-        console.warn("Unknown change type received. Saving full change object.");
-        const unknownData = { ...change };
-        const docRef = doc(notificationsCollection);
-        batch.set(docRef, {
-          type: 'unknown',
-          data: unknownData,
-          timestamp: new Date(timestamp)
-        });
-      }
-    }
-
-    // Commit the batch write to Firestore
-    try {
-      await batch.commit();
-      console.log('Batch write successful.');
-    } catch (error) {
-      console.error('Error during batch write:', error);
-    }
+    console.log('Webhook event stored successfully.');
+  } catch (error) {
+    console.error('Error saving webhook event to Firestore:', error);
   }
 
   return NextResponse.json({ message: 'EVENT_RECEIVED' }, { status: 200 });
@@ -671,58 +628,4 @@ function verifySignature(payload, hubSignature, appSecret) {
   const signatureHash = hubSignature.split('sha256=')[1];
   const expectedHash = crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
   return crypto.timingSafeEqual(Buffer.from(signatureHash), Buffer.from(expectedHash));
-}
-
-// Handle incoming message event
-async function handleMessage(message, batch, notificationsCollection, sender, recipient, timestamp) {
-  const messageData = {
-    senderId: sanitizeField(sender.id),
-    recipientId: sanitizeField(recipient.id),
-    timestamp: new Date(timestamp),
-    messageId: sanitizeField(message.mid),
-    text: message.text || null,
-    isDeleted: message.is_deleted || false,
-    isEcho: message.is_echo || false,
-    isUnsupported: message.is_unsupported || false,
-    attachments: message.attachments || [],
-    quickReply: message.quick_reply ? message.quick_reply.payload : null,
-    referral: message.referral || null,
-    replyTo: message.reply_to || null,
-  };
-
-  console.log('Message Data:', messageData);
-
-  const docRef = doc(notificationsCollection);
-  batch.set(docRef, {
-    type: 'message',
-    data: messageData,
-    timestamp: new Date(timestamp)
-  });
-}
-
-// Handle incoming reaction event
-async function handleReaction(reaction, batch, notificationsCollection, sender, recipient, timestamp) {
-  const reactionData = {
-    senderId: sanitizeField(sender.id),
-    recipientId: sanitizeField(recipient.id),
-    timestamp: new Date(timestamp),
-    messageId: sanitizeField(reaction.mid),
-    action: reaction.action || null,
-    reaction: reaction.reaction || null,
-    emoji: reaction.emoji || null
-  };
-
-  const docRef = doc(notificationsCollection);
-  batch.set(docRef, {
-    type: 'reaction',
-    data: reactionData,
-    timestamp: new Date(timestamp)
-  });
-}
-
-// Other handlers (handlePostback, handleReferral, etc.) remain unchanged...
-
-// Helper function to sanitize field values
-function sanitizeField(value) {
-  return value ? String(value).replace(/[^a-zA-Z0-9_-]/g, '') : null;
 }
