@@ -329,9 +329,245 @@
 //   });
 // }
 
+// import { NextResponse } from 'next/server';
+// import { db } from '../../../firebaseConfig'; // Firebase configuration
+// import { doc, collection, addDoc, writeBatch } from 'firebase/firestore';
+// import crypto from 'crypto';
+
+// // Handle GET request for webhook verification
+// export async function GET(req) {
+//   const { searchParams } = new URL(req.url);
+//   const mode = searchParams.get('hub.mode');
+//   const token = searchParams.get('hub.verify_token');
+//   const challenge = searchParams.get('hub.challenge');
+
+//   const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
+
+//   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+//     console.log('Webhook verification successful.');
+//     return new NextResponse(challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } });
+//   } else {
+//     console.error('Webhook verification failed: Invalid verify token or mode.');
+//     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+//   }
+// }
+
+// // Handle POST request for event notifications
+// export async function POST(req) {
+//   const APP_SECRET = process.env.INSTAGRAM_APP_SECRET;
+//   const X_HUB_SIGNATURE = req.headers.get('x-hub-signature-256');
+
+//   const body = await req.text(); // Get raw body for signature verification
+//   const isValid = verifySignature(body, X_HUB_SIGNATURE, APP_SECRET);
+
+//   if (!isValid) {
+//     console.error('Invalid signature. Webhook payload not genuine.');
+//     return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
+//   }
+
+//   // Parse the JSON body of the request
+//   const jsonBody = JSON.parse(body);
+//   console.log('Webhook event received:', jsonBody);
+
+//   // Handle the event notification and categorize it
+//   for (const entry of jsonBody.entry) {
+//     const userId = entry.id;  // Instagram User ID
+//     const changes = entry.messaging || entry.changes;
+
+//     // Check for valid changes
+//     if (!changes || changes.length === 0) {
+//       console.warn('No changes or messaging events found.');
+//       continue;
+//     }
+
+//     const userDocRef = doc(db, 'users', userId);
+//     const notificationsCollection = collection(userDocRef, 'notifications');
+
+//     // Use batch to handle multiple changes in one transaction
+//     const batch = writeBatch(db);
+
+//     for (const change of changes) {
+//       const { sender = {}, recipient = {}, timestamp = Date.now() } = change;
+
+//       // Check what kind of notification it is
+//       if (change.message) {
+//         handleMessage(change.message, batch, notificationsCollection, sender, recipient, timestamp);
+//       } else if (change.reaction) {
+//         handleReaction(change.reaction, batch, notificationsCollection, sender, recipient, timestamp);
+//       } else if (change.postback) {
+//         handlePostback(change.postback, batch, notificationsCollection, sender, recipient, timestamp);
+//       } else if (change.referral) {
+//         handleReferral(change.referral, batch, notificationsCollection, sender, recipient, timestamp);
+//       } else if (change.read) {
+//         handleSeen(change.read, batch, notificationsCollection, sender, recipient, timestamp);
+//       } else if (change.comment) {
+//         handleCommentUpdate(change.comment, batch, notificationsCollection, sender, recipient, timestamp);
+//       } else if (change.media) {
+//         handleMediaUpdate(change.media, batch, notificationsCollection, sender, recipient, timestamp);
+//       }
+//     }
+
+//     // Commit the batch write to Firestore
+//     try {
+//       await batch.commit();
+//       console.log('Batch write successful.');
+//     } catch (error) {
+//       console.error('Error during batch write:', error);
+//     }
+//   }
+
+//   return NextResponse.json({ message: 'EVENT_RECEIVED' }, { status: 200 });
+// }
+
+// // Verify the signature for security
+// function verifySignature(payload, hubSignature, appSecret) {
+//   if (!hubSignature || !hubSignature.startsWith('sha256=')) return false;
+
+//   const signatureHash = hubSignature.split('sha256=')[1];
+//   const expectedHash = crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
+//   return crypto.timingSafeEqual(Buffer.from(signatureHash), Buffer.from(expectedHash));
+// }
+
+// // Handle incoming message event
+// function handleMessage(message, batch, notificationsCollection, sender, recipient, timestamp) {
+//   const messageData = {
+//     senderId: sender.id,
+//     recipientId: recipient.id,
+//     timestamp,
+//     messageId: message.mid,
+//     text: message.text || null,
+//     isDeleted: message.is_deleted || false,
+//     isEcho: message.is_echo || false,
+//     isUnsupported: message.is_unsupported || false,
+//     attachments: message.attachments || [],
+//     quickReply: message.quick_reply ? message.quick_reply.payload : null,
+//     referral: message.referral ? message.referral : null,
+//     replyTo: message.reply_to || null,
+//   };
+
+//   console.log('Message Data:', messageData);
+
+//   const docRef = doc(notificationsCollection);
+//   batch.set(docRef, {
+//     type: 'message',
+//     data: messageData,
+//     timestamp: new Date(timestamp)
+//   });
+// }
+
+// // Handle incoming reaction event
+// function handleReaction(reaction, batch, notificationsCollection, sender, recipient, timestamp) {
+//   const reactionData = {
+//     senderId: sender.id,
+//     recipientId: recipient.id,
+//     timestamp,
+//     messageId: reaction.mid,
+//     action: reaction.action,
+//     reaction: reaction.reaction || null,
+//     emoji: reaction.emoji || null
+//   };
+
+//   const docRef = doc(notificationsCollection);
+//   batch.set(docRef, {
+//     type: 'reaction',
+//     data: reactionData,
+//     timestamp: new Date(timestamp)
+//   });
+// }
+
+// // Handle postback events
+// function handlePostback(postback, batch, notificationsCollection, sender, recipient, timestamp) {
+//   const postbackData = {
+//     senderId: sender.id,
+//     recipientId: recipient.id,
+//     timestamp,
+//     messageId: postback.mid,
+//     title: postback.title,
+//     payload: postback.payload
+//   };
+
+//   const docRef = doc(notificationsCollection);
+//   batch.set(docRef, {
+//     type: 'postback',
+//     data: postbackData,
+//     timestamp: new Date(timestamp)
+//   });
+// }
+
+// // Handle referral events
+// function handleReferral(referral, batch, notificationsCollection, sender, recipient, timestamp) {
+//   const referralData = {
+//     senderId: sender.id,
+//     recipientId: recipient.id,
+//     timestamp,
+//     ref: referral.ref,
+//     source: referral.source,
+//     type: referral.type
+//   };
+
+//   const docRef = doc(notificationsCollection);
+//   batch.set(docRef, {
+//     type: 'referral',
+//     data: referralData,
+//     timestamp: new Date(timestamp)
+//   });
+// }
+
+// // Handle "seen" events
+// function handleSeen(read, batch, notificationsCollection, sender, recipient, timestamp) {
+//   const seenData = {
+//     senderId: sender.id,
+//     recipientId: recipient.id,
+//     timestamp,
+//     messageId: read.mid
+//   };
+
+//   const docRef = doc(notificationsCollection);
+//   batch.set(docRef, {
+//     type: 'seen',
+//     data: seenData,
+//     timestamp: new Date(timestamp)
+//   });
+// }
+
+// // Handle comment updates
+// function handleCommentUpdate(comment, batch, notificationsCollection, sender, recipient, timestamp) {
+//   const commentData = {
+//     senderId: comment.from.id,
+//     senderUsername: comment.from.username,
+//     mediaId: comment.media.id,
+//     mediaType: comment.media.media_product_type || 'unknown',
+//     commentId: comment.id,
+//     text: comment.text || null,
+//   };
+
+//   const docRef = doc(notificationsCollection);
+//   batch.set(docRef, {
+//     type: 'comment_update',
+//     data: commentData,
+//     timestamp: new Date(timestamp)
+//   });
+// }
+
+// // Handle media updates
+// function handleMediaUpdate(media, batch, notificationsCollection, sender, recipient, timestamp) {
+//   const mediaData = {
+//     mediaId: media.id,
+//     mediaType: media.media_product_type || 'unknown', // Type of media, e.g., 'FEED'
+//     timestamp: new Date(), // Current timestamp
+//   };
+
+//   const docRef = doc(notificationsCollection);
+//   batch.set(docRef, {
+//     type: 'media_update',
+//     data: mediaData,
+//     timestamp: new Date(timestamp)
+//   });
+// }
+
 import { NextResponse } from 'next/server';
 import { db } from '../../../firebaseConfig'; // Firebase configuration
-import { doc, collection, addDoc, writeBatch } from 'firebase/firestore';
+import { doc, collection, writeBatch, addDoc } from 'firebase/firestore';
 import crypto from 'crypto';
 
 // Handle GET request for webhook verification
@@ -371,7 +607,8 @@ export async function POST(req) {
 
   // Handle the event notification and categorize it
   for (const entry of jsonBody.entry) {
-    const userId = entry.id;  // Instagram User ID
+    const userId = sanitizeFirestoreField(entry.id);  // Sanitize User ID for Firestore
+
     const changes = entry.messaging || entry.changes;
 
     // Check for valid changes
@@ -404,6 +641,9 @@ export async function POST(req) {
         handleCommentUpdate(change.comment, batch, notificationsCollection, sender, recipient, timestamp);
       } else if (change.media) {
         handleMediaUpdate(change.media, batch, notificationsCollection, sender, recipient, timestamp);
+      } else {
+        // If the data doesn't match any known format, store the raw change object
+        await handleUnknownChange(change, batch, notificationsCollection);
       }
     }
 
@@ -428,13 +668,18 @@ function verifySignature(payload, hubSignature, appSecret) {
   return crypto.timingSafeEqual(Buffer.from(signatureHash), Buffer.from(expectedHash));
 }
 
+// Sanitize Firestore field names (Firebase does not allow `.`, `/`, etc.)
+function sanitizeFirestoreField(field) {
+  return field.replace(/[\/\.]/g, '_');
+}
+
 // Handle incoming message event
 function handleMessage(message, batch, notificationsCollection, sender, recipient, timestamp) {
   const messageData = {
-    senderId: sender.id,
-    recipientId: recipient.id,
+    senderId: sanitizeFirestoreField(sender.id),
+    recipientId: sanitizeFirestoreField(recipient.id),
     timestamp,
-    messageId: message.mid,
+    messageId: sanitizeFirestoreField(message.mid),
     text: message.text || null,
     isDeleted: message.is_deleted || false,
     isEcho: message.is_echo || false,
@@ -458,10 +703,10 @@ function handleMessage(message, batch, notificationsCollection, sender, recipien
 // Handle incoming reaction event
 function handleReaction(reaction, batch, notificationsCollection, sender, recipient, timestamp) {
   const reactionData = {
-    senderId: sender.id,
-    recipientId: recipient.id,
+    senderId: sanitizeFirestoreField(sender.id),
+    recipientId: sanitizeFirestoreField(recipient.id),
     timestamp,
-    messageId: reaction.mid,
+    messageId: sanitizeFirestoreField(reaction.mid),
     action: reaction.action,
     reaction: reaction.reaction || null,
     emoji: reaction.emoji || null
@@ -478,10 +723,10 @@ function handleReaction(reaction, batch, notificationsCollection, sender, recipi
 // Handle postback events
 function handlePostback(postback, batch, notificationsCollection, sender, recipient, timestamp) {
   const postbackData = {
-    senderId: sender.id,
-    recipientId: recipient.id,
+    senderId: sanitizeFirestoreField(sender.id),
+    recipientId: sanitizeFirestoreField(recipient.id),
     timestamp,
-    messageId: postback.mid,
+    messageId: sanitizeFirestoreField(postback.mid),
     title: postback.title,
     payload: postback.payload
   };
@@ -497,8 +742,8 @@ function handlePostback(postback, batch, notificationsCollection, sender, recipi
 // Handle referral events
 function handleReferral(referral, batch, notificationsCollection, sender, recipient, timestamp) {
   const referralData = {
-    senderId: sender.id,
-    recipientId: recipient.id,
+    senderId: sanitizeFirestoreField(sender.id),
+    recipientId: sanitizeFirestoreField(recipient.id),
     timestamp,
     ref: referral.ref,
     source: referral.source,
@@ -516,10 +761,10 @@ function handleReferral(referral, batch, notificationsCollection, sender, recipi
 // Handle "seen" events
 function handleSeen(read, batch, notificationsCollection, sender, recipient, timestamp) {
   const seenData = {
-    senderId: sender.id,
-    recipientId: recipient.id,
+    senderId: sanitizeFirestoreField(sender.id),
+    recipientId: sanitizeFirestoreField(recipient.id),
     timestamp,
-    messageId: read.mid
+    messageId: sanitizeFirestoreField(read.mid)
   };
 
   const docRef = doc(notificationsCollection);
@@ -533,11 +778,11 @@ function handleSeen(read, batch, notificationsCollection, sender, recipient, tim
 // Handle comment updates
 function handleCommentUpdate(comment, batch, notificationsCollection, sender, recipient, timestamp) {
   const commentData = {
-    senderId: comment.from.id,
+    senderId: sanitizeFirestoreField(comment.from.id),
     senderUsername: comment.from.username,
-    mediaId: comment.media.id,
+    mediaId: sanitizeFirestoreField(comment.media.id),
     mediaType: comment.media.media_product_type || 'unknown',
-    commentId: comment.id,
+    commentId: sanitizeFirestoreField(comment.id),
     text: comment.text || null,
   };
 
@@ -552,7 +797,7 @@ function handleCommentUpdate(comment, batch, notificationsCollection, sender, re
 // Handle media updates
 function handleMediaUpdate(media, batch, notificationsCollection, sender, recipient, timestamp) {
   const mediaData = {
-    mediaId: media.id,
+    mediaId: sanitizeFirestoreField(media.id),
     mediaType: media.media_product_type || 'unknown', // Type of media, e.g., 'FEED'
     timestamp: new Date(), // Current timestamp
   };
@@ -562,5 +807,15 @@ function handleMediaUpdate(media, batch, notificationsCollection, sender, recipi
     type: 'media_update',
     data: mediaData,
     timestamp: new Date(timestamp)
+  });
+}
+
+// Handle unknown changes
+async function handleUnknownChange(change, batch, notificationsCollection) {
+  const docRef = doc(notificationsCollection);
+  batch.set(docRef, {
+    type: 'unknown',
+    data: change,
+    timestamp: new Date()
   });
 }
