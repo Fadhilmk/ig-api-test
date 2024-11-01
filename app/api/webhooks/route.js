@@ -233,7 +233,7 @@ export async function POST(req) {
 
           // Use absolute URL for process_messages endpoint
           const baseUrl = process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
+            ? `${process.env.VERCEL_URL}`
             : 'http://localhost:3000';
           
           await fetch(`${baseUrl}/api/process_messages`, {
