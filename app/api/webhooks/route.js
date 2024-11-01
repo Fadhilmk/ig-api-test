@@ -163,6 +163,7 @@ import { db } from '../../../firebaseConfig';
 import { setDoc, doc, collection } from 'firebase/firestore';
 import crypto from 'crypto';
 
+// Handle GET request for webhook verification
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const mode = searchParams.get('hub.mode');
@@ -180,6 +181,7 @@ export async function GET(req) {
   }
 }
 
+// Handle POST request for event notifications
 export async function POST(req) {
   const APP_SECRET = process.env.INSTAGRAM_APP_SECRET;
   const X_HUB_SIGNATURE = req.headers.get('x-hub-signature-256');
@@ -229,8 +231,12 @@ export async function POST(req) {
           await setDoc(messageDocRef, messageData);
           console.log(`Message stored successfully for user ${userId}`);
 
-          // Pass data to process_messages API to send a reply
-          await fetch('/api/process_messages', {
+          // Use absolute URL for process_messages endpoint
+          const baseUrl = process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : 'http://localhost:3000';
+          
+          await fetch(`${baseUrl}/api/process_messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -250,6 +256,7 @@ export async function POST(req) {
   return NextResponse.json({ message: 'EVENT_RECEIVED' }, { status: 200 });
 }
 
+// Verify the signature for security
 function verifySignature(payload, hubSignature, appSecret) {
   if (!hubSignature || !hubSignature.startsWith('sha256=')) return false;
 
