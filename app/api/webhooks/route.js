@@ -528,8 +528,7 @@ export async function POST(req) {
               media: {
                 id: media.id,
                 type: media.media_product_type,
-              },
-              time,
+              }
             });
 
             console.log(`Comment stored successfully for user ${userId} on media ${media.id}`);
