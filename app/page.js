@@ -157,7 +157,7 @@ export default function InstagramProfile() {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          console.log("Successfully subscribed to webhook fields.");
+          console.log("Successfully hh subscribed to webhook fields.");
         } else {
           console.error("Failed to subscribe to webhook fields.");
         }

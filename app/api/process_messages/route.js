@@ -103,3 +103,4 @@ function verifySignature(payload, hubSignature, appSecret) {
   const expectedHash = crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
   return crypto.timingSafeEqual(Buffer.from(signatureHash), Buffer.from(expectedHash));
 }
+
