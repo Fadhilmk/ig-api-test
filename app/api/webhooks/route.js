@@ -631,11 +631,12 @@
 // }
 
 
+// app/api/webhooks/route.js
+
 import { NextResponse } from 'next/server';
-import  admin from 'firebase-admin';
+import { db } from '../../../firebase-admin';  // Update to use the new export
 import crypto from 'crypto';
 
-const db = admin.firestore();
 // Handle GET request for webhook verification
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
@@ -659,7 +660,7 @@ export async function POST(req) {
   const APP_SECRET = process.env.INSTAGRAM_APP_SECRET;
   const X_HUB_SIGNATURE = req.headers.get('x-hub-signature-256');
 
-  const body = await req.text(); // Get raw body for signature verification
+  const body = await req.text();
   const isValid = verifySignature(body, X_HUB_SIGNATURE, APP_SECRET);
 
   if (!isValid) {
@@ -667,15 +668,14 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
   }
 
-  // Parse the JSON body of the request
   const jsonBody = JSON.parse(body);
-  console.log('Webhook event receiveds:', jsonBody);
+  console.log('Webhook event received:', jsonBody);
 
   try {
-    // Store the webhook data in Firestore using Firebase Admin
     const docRef = db.collection('webhooks').doc(); // Generate a unique document ID
     await docRef.set({
-      receivedAt: new Date().toISOString() // Timestamp of when the event was received
+      receivedAt: new Date().toISOString(),
+      data: jsonBody, // Store the full webhook data for testing
     });
 
     console.log('Webhook event stored successfully.');
