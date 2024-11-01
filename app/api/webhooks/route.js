@@ -266,7 +266,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '../../../firebaseConfig';
-import { setDoc, doc, collection } from 'firebase/firestore';
+import { setDoc, doc, collection, getDoc } from 'firebase/firestore';
 import crypto from 'crypto';
 
 // Handle GET request for webhook verification
@@ -307,50 +307,40 @@ export async function POST(req) {
     // Process each entry (user event) in the webhook data
     for (const entry of jsonBody.entry) {
       const userId = entry.id; // This maps to YOUR_APP_USERS_IG_USER_ID
-      const timestamp = new Date().toISOString();
 
-      // Process each messaging event within the entry
       if (entry.messaging) {
         for (const messagingEvent of entry.messaging) {
           const message = messagingEvent.message || {};
           const senderId = messagingEvent.sender?.id;
-          const recipientId = messagingEvent.recipient?.id;
 
-          // Skip if the message is a reply from our own account
-          if (message.is_echo) {
-            console.log("Skipping response to own message.");
-            continue; // Do not proceed with a response if it's an echo message
+          // Check if the message is a self-generated message or lacks content
+          if (message.is_echo || !message.text) {
+            console.log("Skipping self-message or empty message.");
+            continue;
           }
 
-          // Use message.mid as the unique document ID for each message
-          const messageDocId = message.mid || `${timestamp}-${Math.random()}`;
-          const messagesCollectionRef = collection(db, 'webhooks', userId, 'messages');
-          const messageDocRef = doc(messagesCollectionRef, messageDocId);
+          // Check if the message ID has already been processed
+          const messageDocId = message.mid;
+          const messageDocRef = doc(db, 'webhooks', userId, 'messages', messageDocId);
+          const messageSnapshot = await getDoc(messageDocRef);
 
-          // Extract data from the message event for storage
-          const messageData = {
+          if (messageSnapshot.exists()) {
+            console.log(`Message ${messageDocId} already processed. Skipping.`);
+            continue;
+          }
+
+          // Store the message details in Firestore
+          await setDoc(messageDocRef, {
             senderId,
-            recipientId,
+            messageId: message.mid,
+            text: message.text,
             timestamp: messagingEvent.timestamp,
-            messageId: message.mid || null,
-            text: message.text || null,
-            isDeleted: message.is_deleted || false,
-            isEcho: message.is_echo || false,
-            isUnsupported: message.is_unsupported || false,
-            attachments: message.attachments || [],
-            quickReplyPayload: message.quick_reply?.payload || null,
-            referralData: message.referral || null,
-            replyTo: message.reply_to || null,
-          };
+          });
 
-          // Set the document in Firestore for each message
-          await setDoc(messageDocRef, messageData);
           console.log(`Message stored successfully for user ${userId}`);
 
-          // Use absolute URL for process_messages endpoint
-          const baseUrl = 'https://igtest-sage.v.app';
-
-          // Send data to /api/process_messages endpoint to generate reply
+          // Send data to /api/process_messages for reply (only once per unique message)
+          const baseUrl = 'https://igtest-sage.vercel.app';
           await fetch(`${baseUrl}/api/process_messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
