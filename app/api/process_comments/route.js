@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req) {
-  const { igUserId, mediaId, commentId,text,username,timestamp,fromId, accessToken } = await req.json();
+  const { igUserId, mediaId, commentId,text,username,fromId, accessToken } = await req.json();
   const replyText = `Thank you for Commenting "${username}"`; // Customize this reply
 
   try {

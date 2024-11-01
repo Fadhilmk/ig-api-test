@@ -545,7 +545,6 @@ export async function POST(req) {
                 text: text,
                 fromId:from.id,
                 username: from.username,
-                timestamp: time,
                 accessToken: process.env.INSTAGRAM_ACCESS_TOKEN,
               }),
             });
