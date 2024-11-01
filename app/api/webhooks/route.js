@@ -232,7 +232,7 @@ export async function POST(req) {
           console.log(`Message stored successfully for user ${userId}`);
 
           // Use absolute URL for process_messages endpoint
-          const baseUrl = 'https://igtest-sage.vercel.app';
+          const baseUrl = 'https://igtest-sa';
           
           await fetch(`${baseUrl}/api/process_messages`, {
             method: 'POST',
