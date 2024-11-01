@@ -32,13 +32,13 @@ import { getStorage } from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDaRaPiaO-IMGKrLpZDRuTckwGixdtUesU",
-  authDomain: "the-madi.firebaseapp.com",
-  projectId: "the-madi",
-  storageBucket: "the-madi.appspot.com",
-  messagingSenderId: "1020225404793",
-  appId: "1:1020225404793:web:0dd63031395f22da31f9a8",
-  measurementId: "G-J9MBSXGE4D"
+  apiKey: "AIzaSyB_qO66jRXMoRcAeikXscjQHCShVDo__Iw",
+  authDomain: "ig-api-demo.firebaseapp.com",
+  projectId: "ig-api-demo",
+  storageBucket: "ig-api-demo.firebasestorage.app",
+  messagingSenderId: "330821835334",
+  appId: "1:330821835334:web:e1f5f6e7e408d395eb4847",
+  measurementId: "G-EJ7WH7X1FB"
 };
 
 // Initialize Firebase
