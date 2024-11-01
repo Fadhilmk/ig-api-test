@@ -23,32 +23,29 @@
 
 // export { db };
 
+
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyDaRaPiaO-IMGKrLpZDRuTckwGixdtUesU",
+  authDomain: "the-madi.firebaseapp.com",
+  projectId: "the-madi",
+  storageBucket: "the-madi.appspot.com",
+  messagingSenderId: "1020225404793",
+  appId: "1:1020225404793:web:0dd63031395f22da31f9a8",
+  measurementId: "G-J9MBSXGE4D"
 };
 
-// Initialize Firebase (make sure it’s only initialized once)
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-// Initialize Firestore
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const storage = getStorage(app);
 
-// Initialize Analytics (only on the client-side)
-let analytics;
-if (typeof window !== "undefined") {
-  analytics = getAnalytics(app);
-}
-
-export { db };
+// Export the initialized services
+export { db, auth, storage };

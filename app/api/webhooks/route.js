@@ -634,7 +634,8 @@
 // app/api/webhooks/route.js
 
 import { NextResponse } from 'next/server';
-import { db } from '../../../firebase-admin';  // Update to use the new export
+import { db } from '../../../firebaseConfig'; // Update the path to where your firebaseConfig.js is located
+import { setDoc, doc } from 'firebase/firestore';
 import crypto from 'crypto';
 
 // Handle GET request for webhook verification
@@ -672,8 +673,8 @@ export async function POST(req) {
   console.log('Webhook event received:', jsonBody);
 
   try {
-    const docRef = db.collection('webhooks').doc(); // Generate a unique document ID
-    await docRef.set({
+    const docRef = doc(db, 'webhooks', 'unique-id'); // Generate a unique document ID as per your logic
+    await setDoc(docRef, {
       receivedAt: new Date().toISOString(),
       data: jsonBody, // Store the full webhook data for testing
     });
