@@ -530,7 +530,6 @@ export async function POST(req) {
                 type: media.media_product_type,
               },
               time,
-              receivedAt: time,
             });
 
             console.log(`Comment stored successfully for user ${userId} on media ${media.id}`);
