@@ -128,7 +128,7 @@ export async function POST(req) {
                 {
                   title: "Thank you for your feedback!",
                   subtitle: "We appreciate your engagement.",
-                  image_url: "<YOUR_IMAGE_URL>",
+                  image_url: "https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
                   default_action: {
                     type: "web_url",
                     url: "https://www.maadiy.com/",
