@@ -197,33 +197,36 @@ export async function POST(req) {
     const mediaData = mediaSnapshot.data();
     const {
       Keywords = [],
-      TemplateMessage = false,
+      templateMessage = false,
       TextMessage = false,
+      replyMessage = '',
       commentAutoReply = [],
-      excludeKeywords = [],
-      replyMessage = ''
-    } = mediaData;
+      excludeKeywords = []
+    } = mediaData || {}; // Use an empty object as a fallback
+
+    console.log('Media data:', mediaData); // Log the media data for debugging
 
     // Check if the comment text contains any excluded keywords
     const isExcluded = excludeKeywords.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()));
     if (isExcluded) {
+      console.log('Comment excluded based on excludeKeywords');
       return NextResponse.json({ message: 'Comment excluded based on excludeKeywords' }, { status: 200 });
     }
 
     // Check if comment text matches any keywords
     const isKeywordMatched = Keywords.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()));
+    console.log('isKeywordMatched:', isKeywordMatched);
 
     // Prepare for reply based on conditions
     let replyText;
 
     if (isKeywordMatched && commentAutoReply.length > 0) {
-      // If `commentAutoReply` exists and a keyword match is found, reply using `commentAutoReply` strings as a comment reply
+      // Reply using `commentAutoReply` strings as a comment reply
       const randomReply = commentAutoReply.length === 1
         ? commentAutoReply[0]
-        : commentAutoReply[Math.floor(Math.random() * commentAutoReply.length)]; // Randomly select one reply
+        : commentAutoReply[Math.floor(Math.random() * commentAutoReply.length)];
 
       const replyUrl = `https://graph.instagram.com/v21.0/${commentId}/replies`;
-
       const response = await fetch(replyUrl, {
         method: 'POST',
         headers: {
@@ -242,7 +245,7 @@ export async function POST(req) {
       console.log('Comment reply sent successfully.');
       return NextResponse.json({ message: 'Comment reply sent successfully' }, { status: 200 });
 
-    } else if (isKeywordMatched && TemplateMessage && !TextMessage) {
+    } else if (isKeywordMatched && templateMessage && !TextMessage) {
       // Send a direct template message
       replyText = {
         recipient: { comment_id: commentId },
@@ -294,7 +297,7 @@ export async function POST(req) {
       console.log('Template message sent successfully.');
       return NextResponse.json({ message: 'Template message sent successfully' }, { status: 200 });
 
-    } else if (isKeywordMatched && TextMessage && !TemplateMessage) {
+    } else if (isKeywordMatched && TextMessage && !templateMessage) {
       // Send a direct text message
       replyText = {
         recipient: { comment_id: commentId },
@@ -321,7 +324,7 @@ export async function POST(req) {
       console.log('Text message sent successfully.');
       return NextResponse.json({ message: 'Text message sent successfully' }, { status: 200 });
     } else {
-      // No matching conditions for sending a reply
+      console.log('No matching conditions for sending a reply');
       return NextResponse.json({ message: 'No matching conditions for reply' }, { status: 200 });
     }
 
