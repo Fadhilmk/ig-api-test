@@ -187,7 +187,7 @@ export async function POST(req) {
 
   try {
     // Fetch media document from Firebase
-    const mediaDocRef = doc(collection(db, 'media'), mediaId);
+    const mediaDocRef = doc(collection(db, 'medias'), mediaId);
     const mediaSnapshot = await getDoc(mediaDocRef);
 
     if (!mediaSnapshot.exists()) {
