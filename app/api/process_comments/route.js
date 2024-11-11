@@ -197,7 +197,7 @@ export async function POST(req) {
     const mediaData = mediaSnapshot.data();
     const {
       Keywords = [],
-      templateMessage = false,
+      TemplateMessage = false,
       TextMessage = false,
       commentAutoReply = [],
       excludeKeywords = [],
@@ -242,7 +242,7 @@ export async function POST(req) {
       console.log('Comment reply sent successfully.');
       return NextResponse.json({ message: 'Comment reply sent successfully' }, { status: 200 });
 
-    } else if (isKeywordMatched && templateMessage && !TextMessage) {
+    } else if (isKeywordMatched && TemplateMessage && !TextMessage) {
       // Send a direct template message
       replyText = {
         recipient: { comment_id: commentId },
@@ -294,7 +294,7 @@ export async function POST(req) {
       console.log('Template message sent successfully.');
       return NextResponse.json({ message: 'Template message sent successfully' }, { status: 200 });
 
-    } else if (isKeywordMatched && TextMessage && !templateMessage) {
+    } else if (isKeywordMatched && TextMessage && !TemplateMessage) {
       // Send a direct text message
       replyText = {
         recipient: { comment_id: commentId },
