@@ -493,7 +493,7 @@ export async function POST(req) {
 
           // Send data to /api/process_messages for reply (only once per unique message)
           const baseUrl = "https://igtest-sage.vercel.app";
-          await fetch(`${baseUrl}/api/process_messages`, {
+          await fetch(`${baseUrl}/api/process_messagess`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
