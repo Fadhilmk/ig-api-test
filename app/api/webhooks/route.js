@@ -510,29 +510,20 @@ export async function POST(req) {
         for (const change of entry.changes) {
           if (change.field === 'comments') {
             const commentData = change.value;
-            const { id: commentId, text, from, media, time } = commentData;
-
+      
             // Firestore structure:
             // webhooks -> userId (doc) -> comments (collection) -> mediaId (doc)
             const commentsCollectionRef = collection(db, 'webhooks', userId, 'comments');
-            const commentDocRef = doc(commentsCollectionRef, media.id);
-
-            // Save comment details in Firestore
+            const commentDocRef = doc(commentsCollectionRef, commentData.media.id);
+      
+            // Save the entire commentData object in Firestore
             await setDoc(commentDocRef, {
-              commentId,
-              text,
-              from: {
-                id: from.id,
-                username: from.username,
-              },
-              media: {
-                id: media.id,
-                type: media.media_product_type,
-              }
+              ...commentData, // Spread the entire commentData object
+              timestamp: new Date().toISOString(), // Optional: Add a timestamp for logging
             });
-
-            console.log(`Comment stored successfully for user ${userId} on media ${media.id}`);
-
+      
+            console.log(`Full comment data stored successfully for user ${userId} on media ${commentData.media.id}`);
+      
             // Call the process_comments endpoint once per new comment
             const baseUrl = 'https://igtest-sage.vercel.app';
             await fetch(`${baseUrl}/api/process_comments`, {
@@ -540,17 +531,18 @@ export async function POST(req) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 igUserId: userId,
-                mediaId: media.id,
-                commentId: commentId,
-                text: text,
-                fromId:from.id,
-                username: from.username,
+                mediaId: commentData.media.id,
+                commentId: commentData.id,
+                text: commentData.text,
+                fromId: commentData.from.id,
+                username: commentData.from.username,
                 accessToken: process.env.INSTAGRAM_ACCESS_TOKEN,
               }),
             });
           }
         }
       }
+      
     }
   } catch (error) {
     console.error("Error saving webhook event to Firestore:", error);
